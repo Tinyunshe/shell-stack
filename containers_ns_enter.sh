@@ -10,6 +10,6 @@ function enns() {
 }
 
 # arg1: pod名称
-# arg2: namespace名称
+# arg2: namespace名称(默认default)
 # useage:
 # enns [POD_NAME] [NAMESPACE_NAME]
