@@ -11,5 +11,5 @@ function enns() {
 
 # arg1: pod名称
 # arg2: namespace名称
-
-# enns [pod_name] [namespace_name]
+# useage:
+# enns [POD_NAME] [NAMESPACE_NAME]
