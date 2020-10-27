@@ -1,4 +1,5 @@
 #!/bin/bash
+# etcd备份以及master节点证书备份
 
 LOCAL_IP=$(/usr/sbin/ifconfig eth0 | awk '/inet/ {print $2}')
 BAK_DIR=/data/server/etcd/backup
