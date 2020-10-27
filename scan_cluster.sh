@@ -11,13 +11,12 @@ function file_handler() {
 
 function url_handler() {
     local URL=$1
-    if ! curl -sk ${URL} -H "Authorization:Bearer ${TOKEN}" &> /dev/null;then printf "${URL} failed";exit 1;fi
+    if ! curl -sk ${URL} -H "Authorization:Bearer ${TOKEN}" &> /dev/null;then printf "Error ${URL} connect failed";exit 1;fi
 }
 
 function ssh_handler() {
     local HOST=$1
-    file_handler ssh_error.txt
-    if ! ssh -o ConnectTimeout=5 -o ConnectionAttempts=2 ${HOST} "echo ping";then
+    if ! ssh -o ConnectTimeout=3 -o ConnectionAttempts=5 -o PasswordAuthentication=no -o StrictHostKeyChecking=no ${HOST} "echo ping";then
         printf "${HOST} ssh connect timeout\n" >> ssh_error.txt
         return 1
     fi
@@ -81,16 +80,24 @@ function host_handler() {
     file_handler host_disk.txt
     file_handler host_cpurate.txt
     file_handler host_mem.txt
+    file_handler ssh_error.txt
 
     for i in ${IPS_LIST};do
         if ! ssh_handler ${i};then continue;fi
     done
-    if [ -s ssh_error.txt ];then printf "你ssh有问题\nssh失败列表\n";cat ssh_error.txt;exit 1;else printf "ssh all ok\n";fi
-    for c in ${IPS_LIST};do
+    if [ -s ssh_error.txt ];then 
+        printf "Error ssh connect questions\nssh faild machine list\n"
+        cat ssh_error.txt
+        read -p "Skip ssh faild machine? (yes/no)" p
+        if [[ $p == "yes" ]];then for i in $(awk '{print $1}' ssh_error.txt) ;do sed  -i "/$i/d" host_ip.txt ;done;else exit 1;fi
+    else 
+        printf "ssh all ok\n"
+    fi
+    for c in $(awk '{print $NF}' host_ip.txt);do
         host_ssh ${c}
     done
 
-    paste host_ip.txt host_cpu.txt host_cpurate.txt host_mem.txt| sed '1i集群名称 集群IP地址 CPU核心数 CPU负载量 内存使用率' |column -t > ret.txt
+    paste host_ip.txt host_cpu.txt host_cpurate.txt host_mem.txt| sed '1iname address cpu_num cpu_load memory' |column -t > ret.txt
     host_num
 }
 
@@ -112,9 +119,9 @@ function main() {
     host_ips
     host_handler
     
-    printf "集群状态: \n";cat ret.txt
-    printf "磁盘使用率: \n";cat host_disk.txt
-    printf "全部集群数: \n";cat host_num.txt
+    printf "Cluster Status: \n";cat ret.txt
+    printf "Disk Useage: \n";cat host_disk.txt
+    printf "All Cluster number: \n";cat host_num.txt
 }
 
 ACP_IP="192.168.1.10"
