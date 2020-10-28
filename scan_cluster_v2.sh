@@ -137,7 +137,7 @@ function main() {
     cluster_handler
     host_jq_handler
     host_ssh_handler
-    display
+    display|more
     
 }
 
