@@ -27,9 +27,9 @@ function ssh_check() {
     done
 
     if [ -s ssh_error.txt ];then 
-        printf "Error ssh connect questions\nssh faild machine list\n"
+        printf "Error ssh connection has problem\nssh faild machine list:\n"
         cat ssh_error.txt
-        read -p "Skip ssh faild machine continue scan cluster? (yes/no)" p
+        read -p "Skip the ssh failed machines continue to scan the cluster? (yes/no)" p
         if [ ${p} != "yes" ];then exit 1;fi
     else 
         printf "ssh all ok\n"
