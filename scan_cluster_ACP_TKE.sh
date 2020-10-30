@@ -6,16 +6,23 @@
 # 3. clusters接口url路径
 
 function file_handler() {
+
     local FILE_NAME=$1
+
     if [ -e ${FILE_NAME} ];then > ${FILE_NAME};else touch ${FILE_NAME};fi
+
 }
 
 function url_handler() {
+
     local URL=$1
-    if ! curl -sk ${URL} -H "Authorization:Bearer ${TOKEN}" &> /dev/null;then printf "Error ${URL} connect failed";exit 1;fi
+
+    if ! curl -sk ${URL} -H "Authorization:Bearer ${TOKEN}" &> /dev/null;then printf "ERROR ${URL} connect failed";exit 1;fi
+
 }
 
 function ssh_check() {
+
     local IPS_LIST=$*
 
     file_handler ssh_error.txt
@@ -27,7 +34,7 @@ function ssh_check() {
     done
 
     if [ -s ssh_error.txt ];then 
-        printf "Error ssh connection has problem\nssh faild machine list:\n"
+        printf "ERROR ssh connection has problem\nssh faild machine list:\n"
         cat ssh_error.txt
         read -p "Skip the ssh failed machines continue to scan the cluster? (yes/no)" p
         if [ ${p} != "yes" ];then exit 1;fi
@@ -38,12 +45,14 @@ function ssh_check() {
 }
 
 function ssh_exec() {
+
     local HOST=$1
 
     if [[ -s ssh_error.txt && $(awk '{print $1}' ssh_error.txt|grep -w "${HOST}") ]];then
         printf "ssh_error\n" >> host_cpurate.txt
         printf "ssh_error\n" >> host_mem.txt
-        printf "${HOST}:\nssh_error\n===\n" >> host_disk.txt
+        printf "${HOST}: ssh_error\n" >> host_disk.txt
+        printf "${HOST}: ssh_error\n" >> host_time.txt
         return 1
     fi
 
@@ -61,9 +70,12 @@ echo -e "\${RealUsedMem}\t\${TotalMem}"|awk '{printf "%2.2f\n",\$1/\$2*100}'
 EOF
 
     scp check_mem.sh ${HOST}:/tmp &> /dev/null
-    printf "${HOST}:\n" >> host_disk.txt;ssh ${HOST} "df -hT / /cpaas /var/lib/docker|awk 'NR>1{print \$NF,\$(NF-1)}'|column -t" >> host_disk.txt 2> /dev/null;printf "===\n" >> host_disk.txt
+    DISK_DATA=$(ssh ${HOST} df -hT / /var/lib/docker /alauda-data /alauda_data /alaudadata /cpaas /data 2> /dev/null|awk -v n=${HOST} 'BEGIN {print n":"} NR>1{print $NF,$(NF-1)}'|xargs|column -t)
+    echo "${DISK_DATA}" >> host_disk.txt
+    ssh ${HOST} "echo ${HOST}: $(date '+%Y-%m-%d %H:%M:%S')" >> host_time.txt
     ssh ${HOST} "uptime | awk '{print \$NF}'" >> host_cpurate.txt
     ssh ${HOST} "bash /tmp/check_mem.sh && rm -f /tmp/check_mem.sh" >> host_mem.txt
+
 }
 
 function host_num() {
@@ -72,6 +84,7 @@ function host_num() {
 
     file_handler host_num.txt
     printf "${HOST_COUNT}\n" > host_num.txt
+
 }
 
 function host_jq_handler() {
@@ -84,7 +97,7 @@ function host_jq_handler() {
         RESOURCE_URL="http://${ACP_IP}/kubernetes/${h}/api/v1/nodes"
         url_handler ${RESOURCE_URL}
         file_handler ${h}_host_ip.txt
-        curl -sk http://${ACP_IP}/kubernetes/${h}/api/v1/nodes -H "Authorization:Bearer ${TOKEN}" | jq . > ${h}.json
+        curl -sk ${RESOURCE_URL} -H "Authorization:Bearer ${TOKEN}" | jq . > ${h}.json
         CPU_NUM=$(cat ${h}.json | jq '.items[].status.capacity.cpu' | tr -d '"')
         IPS=$(cat ${h}.json | jq '.items[].status.addresses[0].address' | tr -d '"')
         printf "${CPU_NUM}\n" >> host_cpu.txt
@@ -103,6 +116,7 @@ function host_ssh_handler() {
     file_handler host_mem.txt
     file_handler host_cpurate.txt
     file_handler host_disk.txt
+    file_handler host_time.txt
 
     ssh_check ${IPS_LIST}
 
@@ -125,8 +139,9 @@ function display() {
 
     paste host_ip.txt host_cpu.txt host_cpurate.txt host_mem.txt| sed '1iname address cpu_num cpu_load memory' |column -t > ret.txt
     printf "Cluster Status: \n";cat ret.txt
-    printf "Disk Useage: \n";cat host_disk.txt
-    printf "Total Cluster number: \n";cat host_num.txt
+    printf "\nDisk Useage: \n";cat host_disk.txt
+    printf "\nAll machines time: \n";cat host_time.txt
+    printf "\nTotal Cluster number: \n";cat host_num.txt
 
 }
 
@@ -143,6 +158,6 @@ function main() {
 
 ACP_IP="192.168.1.10"
 CLUSTER_URL="http://${ACP_IP}/apis/platform.tkestack.io/v1/clusters"
-TOKEN=""
+TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6IjMyZWQ5NmZiM2U0YzkyYmExNDM4ZDQxOTcxMTA2YTdjZTlmNjE0NjIifQ.eyJpc3MiOiJodHRwczovLzE5Mi4xNjguMS4xMC9kZXgiLCJzdWIiOiJDaVF3T0dFNE5qZzBZaTFrWWpnNExUUmlOek10T1RCaE9TMHpZMlF4TmpZeFpqVTBOallTQld4dlkyRnMiLCJhdWQiOiJhbGF1ZGEtYXV0aCIsImV4cCI6MTc1NzE1MDUwNiwiaWF0IjoxNTk5NDcwNTA2LCJub25jZSI6ImFsYXVkYS1jb25zb2xlIiwiYXRfaGFzaCI6IlBtTEc0UTFESGgxaGM2V0hmamNRQ2ciLCJlbWFpbCI6ImFkbWluQGNwYWFzLmlvIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiLnrqHnkIblkZgiLCJleHQiOnsiaXNfYWRtaW4iOnRydWUsImNvbm5faWQiOiJsb2NhbCJ9fQ.qyKGpAg2XBOs9tGChnLyA6C_NOiXTr96JwBoZTieV3cxGqJwildrSMWHwSJQD4Mxs8qic1ujJChNjaUYhpmMCaFyCKf4xiEkFXahrVPJ_Rwnqhdv5vm1hrj_rdalinSxxakD_-HZdlFyk3APqGHQJLkMKlSGUAVI1q0UuRFbaZbO5SwP82InJp845Ecoe6IraA41TtIoMCHhWoSr-wAU7n1oa1NubwXNNKHF_ITR1E2XXLosDDllfSP_KJqIlXj5eT1Cdi-e6BPuNbtMj-pEzF2nKVPS4G1v5ihsN-4Sa8NEZuSW_FWq8eK7u9HgLPMYPQPTG-EiUeusF0HGSmfuQw"
 
 main
