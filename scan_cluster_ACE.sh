@@ -4,7 +4,7 @@
 # 1. 平台token值
 # 2. ace平台访问ip
 # 3. username用户账号
-# 4. 确定是 http 还是 https
+# 4. 确定是 http 还是 https（可选，非必须更改项）
 # 5. port jakiro端口（可选，非必须更改项）
 
 function file_handler() {
@@ -160,7 +160,7 @@ function main() {
 
 ACE_IP="10.0.128.80"
 USERNAME="alauda"
-HTTP_TYPE="http"
+HTTP_TYPE="http"  # 根据实际平台访问协议类型更改
 ACE_PORT="32001"  # 如果没有自定过端口就不需要改动
 NAME_SCRAP_URL="${HTTP_TYPE}://${ACE_IP}:${ACE_PORT}/v2/regions/${USERNAME}/"
 TOKEN="95b0593e2fa6d86c2d7930f2fabcc45f07bb6b13"
