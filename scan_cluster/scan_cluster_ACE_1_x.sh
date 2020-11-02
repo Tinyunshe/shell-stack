@@ -72,7 +72,7 @@ echo -e "\${RealUsedMem}\t\${TotalMem}"|awk '{printf "%2.2f\n",\$1/\$2*100}'
 EOF
 
     scp check_mem.sh ${HOST}:/tmp &> /dev/null
-    DISK_DATA=$(ssh ${HOST} df -hT / /var/lib/docker /alauda-data /alauda_data /alaudadata /cpaas /data 2> /dev/null|awk -v n=${HOST} 'BEGIN {print n":"} NR>1{print $NF,$(NF-1)}'|xargs|column -t)
+    DISK_DATA=$(ssh ${HOST} df -hT / /var/lib/docker /alauda /alauda-data /alauda_data /alaudadata /cpaas /data 2> /dev/null|awk -v n=${HOST} 'BEGIN {print n":"} NR>1{print $NF,$(NF-1)}'|xargs|column -t)
     echo "${DISK_DATA}" >> host_disk.txt
     ssh ${HOST} "echo ${HOST}: $(date '+%Y-%m-%d %H:%M:%S')" >> host_time.txt
     ssh ${HOST} "uptime | awk '{print \$NF}'" >> host_cpurate.txt
@@ -96,12 +96,12 @@ function host_jq_handler() {
     file_handler host_ip.txt
     file_handler host_cpu.txt
     for h in ${HOST_LIST};do
-        RESOURCE_URL="${HTTP_TYPE}://${ACE_IP}:${ACE_PORT}/v2/regions/${USERNAME}/${h}/nodes"
+        RESOURCE_URL="${HTTP_TYPE}://${ACE_IP}:${ACE_PORT}/v1/regions/${USERNAME}/${h}/nodes"
         url_handler ${RESOURCE_URL}
         file_handler ${h}_host_ip.txt
         curl -sk ${RESOURCE_URL} -H "Authorization:TOKEN ${TOKEN}" | jq . > ${h}.json
-        CPU_NUM=$(cat ${h}.json | jq '.items[].status.capacity.cpu' | tr -d '"')
-        IPS=$(cat ${h}.json | jq '.items[].status.addresses[0].address' | tr -d '"')
+        CPU_NUM=$(cat ${h}.json | jq '.[].resources.cpus' | tr -d '"')
+        IPS=$(cat ${h}.json | jq '.[].private_ip' | tr -d '"')
         printf "${CPU_NUM}\n" >> host_cpu.txt
         printf "${IPS}\n" >> ${h}_host_ip.txt && sed -i "s#^#${h} #" ${h}_host_ip.txt
         cat ${h}_host_ip.txt >> host_ip.txt
@@ -161,8 +161,8 @@ function main() {
 ACE_IP="10.0.128.80"
 USERNAME="alauda"
 HTTP_TYPE="http"  # 根据实际平台访问协议类型更改
-ACE_PORT="32001"  # 如果没有自定过端口就不需要改动
-NAME_SCRAP_URL="${HTTP_TYPE}://${ACE_IP}:${ACE_PORT}/v2/regions/${USERNAME}/"
+ACE_PORT="20081"  # 如果没有自定过端口就不需要改动
+NAME_SCRAP_URL="${HTTP_TYPE}://${ACE_IP}:${ACE_PORT}/v1/regions/${USERNAME}/"
 TOKEN="95b0593e2fa6d86c2d7930f2fabcc45f07bb6b13"
 
 main
