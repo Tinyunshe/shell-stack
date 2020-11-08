@@ -4,9 +4,11 @@ function cert_scan() {
 
     local NS_LIST=$*
 
+    for item in $(find /etc/kubernetes/pki -maxdepth 2 -name "*.crt");do openssl x509 -in $item -text -noout| grep Not;echo ======================$item===============;done
+
 }
 
-function count_pod() {
+function ns_count_pod() {
 
     local NS=$*
 
@@ -25,7 +27,7 @@ function count_pod() {
 
 }
     
-function f_check() {
+function check_kubectl() {
 
     printf "kubectl checking...\n"
     if ! command -v kubectl &> /dev/null;then
@@ -38,16 +40,20 @@ function workflow() {
 
     NS_LIST=(cpaas-system alauda-system cert-manager kube-system)
 
-    count_pod ${NS_LIST[@]}
+    ns_count_pod ${NS_LIST[@]}
     cert_scan
 
+}
+
+function opts() {
+    local opts
 }
 
 function main() {
 
     set -eu
 
-    f_check
+    check_kubectl
     workflow
 
 }
