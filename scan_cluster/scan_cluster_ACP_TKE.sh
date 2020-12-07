@@ -94,7 +94,7 @@ function host_jq_handler() {
     file_handler host_ip.txt
     file_handler host_cpu.txt
     for h in ${HOST_LIST};do
-        RESOURCE_URL="http://${ACP_IP}/kubernetes/${h}/api/v1/nodes"
+        RESOURCE_URL="${HTTP_TYPE}://${ACP_IP}/kubernetes/${h}/api/v1/nodes"
         url_handler ${RESOURCE_URL}
         file_handler ${h}_host_ip.txt
         curl -sk ${RESOURCE_URL} -H "Authorization:Bearer ${TOKEN}" | jq . > ${h}.json
@@ -157,7 +157,8 @@ function main() {
 }
 
 ACP_IP="192.168.1.10"
-CLUSTER_URL="http://${ACP_IP}/apis/platform.tkestack.io/v1/clusters"
+HTTP_TYPE="http"
+CLUSTER_URL="${HTTP_TYPE}://${ACP_IP}/apis/platform.tkestack.io/v1/clusters"
 TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6IjMyZWQ5NmZiM2U0YzkyYmExNDM4ZDQxOTcxMTA2YTdjZTlmNjE0NjIifQ.eyJpc3MiOiJodHRwczovLzE5Mi4xNjguMS4xMC9kZXgiLCJzdWIiOiJDaVF3T0dFNE5qZzBZaTFrWWpnNExUUmlOek10T1RCaE9TMHpZMlF4TmpZeFpqVTBOallTQld4dlkyRnMiLCJhdWQiOiJhbGF1ZGEtYXV0aCIsImV4cCI6MTc1NzE1MDUwNiwiaWF0IjoxNTk5NDcwNTA2LCJub25jZSI6ImFsYXVkYS1jb25zb2xlIiwiYXRfaGFzaCI6IlBtTEc0UTFESGgxaGM2V0hmamNRQ2ciLCJlbWFpbCI6ImFkbWluQGNwYWFzLmlvIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiLnrqHnkIblkZgiLCJleHQiOnsiaXNfYWRtaW4iOnRydWUsImNvbm5faWQiOiJsb2NhbCJ9fQ.qyKGpAg2XBOs9tGChnLyA6C_NOiXTr96JwBoZTieV3cxGqJwildrSMWHwSJQD4Mxs8qic1ujJChNjaUYhpmMCaFyCKf4xiEkFXahrVPJ_Rwnqhdv5vm1hrj_rdalinSxxakD_-HZdlFyk3APqGHQJLkMKlSGUAVI1q0UuRFbaZbO5SwP82InJp845Ecoe6IraA41TtIoMCHhWoSr-wAU7n1oa1NubwXNNKHF_ITR1E2XXLosDDllfSP_KJqIlXj5eT1Cdi-e6BPuNbtMj-pEzF2nKVPS4G1v5ihsN-4Sa8NEZuSW_FWq8eK7u9HgLPMYPQPTG-EiUeusF0HGSmfuQw"
 
 main
