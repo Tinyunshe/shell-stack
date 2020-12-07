@@ -3,7 +3,8 @@
 # 按正规环境修改：
 # 1. 平台token值
 # 2. acp平台访问ip
-# 3. clusters接口url路径
+# 3. http协议类型
+# 4. clusters接口url路径
 
 function file_handler() {
 
