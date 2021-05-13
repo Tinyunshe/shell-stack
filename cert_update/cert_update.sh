@@ -76,7 +76,7 @@ cert::gen_cert() {
   #   cert::backup_file "${cert}"
   # fi
 
-  case "${cert_type}" in
+  case "${cert_type}" in  
     client)
       openssl req -new  -key ${key} -subj "${subj}" -reqexts v3_ext \
         -config <(printf "${csr_conf} extendedKeyUsage = clientAuth\n") -out ${csr}
@@ -154,7 +154,7 @@ cert::update_etcd_cert() {
   # /etc/kubernetes/pki/etcd/server
   CART_NAME=${PKI_PATH}/server
   subject_alt_name=$(cert::get_subject_alt_name ${CART_NAME})
-  cert::gen_cert "${CART_NAME}" "peer" "/CN=etcd-server" "${CAER_DAYS}" "${subject_alt_name}"
+  cert::gen_cert "${CART_NAME}" "peer" "/CN=etcd-server" "${CAER_DAYS}" "${subject_alt_name},DNS: etcd.kube-system"
 
   # generate etcd peer certificate
   # /etc/kubernetes/pki/etcd/peer

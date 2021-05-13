@@ -1,5 +1,5 @@
 #!/bin/bash
-# 版本 Version 4.0
+# Version 4.0
 
 function log::info() {
 
@@ -21,7 +21,7 @@ function log::warning() {
 
 function check::run_check() {
 
-    ## 基础运行条件检查
+    ## Basic operation environment check
     local package=(jq sshpass)
 
     # user check
@@ -35,7 +35,7 @@ function check::run_check() {
 
 function check::file_check() {
 
-    ## 数据文件检查
+    ## Data file check
     local FILE_NAME=${1}
 
     if [ -e ${FILE_NAME} ];then > ${FILE_NAME};else touch ${FILE_NAME};fi
@@ -44,8 +44,8 @@ function check::file_check() {
 
 function check::url_check() {
 
-    ##  http返回码检查
-    ## 如果$2是skip将忽略可以继续
+    ## HTTP response code check
+    ## If $2 is skip, it will be ignored and can continue
     local URL=${1}
     local ACTION=${2:-'false'}
     local HTTP_CODE=$(curl -s -k -m 5 -o /dev/null -w %{http_code} ${URL} -H "Authorization:Bearer ${TOKEN}")
@@ -60,9 +60,9 @@ function check::url_check() {
 
 function ssh_handler::check() {
 
-    ## ssh检查各个服务器
-    ## 1. 免密登陆检查
-    ## 2. 尝试密码登陆检查
+    ## SSH checks all server
+    ## 1. no password login
+    ## 2. try password login
     local IPS_LIST=$*
 
     for i in ${IPS_LIST};do
@@ -90,7 +90,7 @@ function ssh_handler::check() {
 
 function ssh_handler::ask() {
 
-    ## 存在ssh失败的服务器，询问是否要继续
+    ## There is a server with SSH failure. Ask if you want to continue
     if [ -s ${SSH_ERROR_TXT} ];then 
         log::warning "ssh connection has problem\n\nSSH failed machine list:"
         cat ${SSH_ERROR_TXT} && printf "\n"
@@ -104,10 +104,11 @@ function ssh_handler::ask() {
 
 function ssh_handler::exec_fetch_metrics() {
 
-    ## ssh到各个服务器获取指标数据
+    ## SSH to each server to get index data
     local HOST=${1}
 
-    ## 如果在ssh检查阶段失败的服务器，将打印指标列为ssh_error
+    ## If the server fails in the SSH check phase, the print indicator is listed as ssh_error
+
     log::info "ssh ${HOST} exec fetching"
     if [[ -s ${SSH_ERROR_TXT} && $(grep -w "${HOST}" ${SSH_ERROR_TXT}) ]];then
         printf "ssh_error\n" >> ${HOST_CPU_RATE_TXT}
@@ -117,7 +118,7 @@ function ssh_handler::exec_fetch_metrics() {
         return 1
     fi
 
-    ## 如果在ssh检查阶段存在尝试密码登陆的服务器，将赋值密码变量
+    ## If there is a server trying to log in with a password during the SSH check phase, the password variable will be assigned
     set +u
     if [[ -s ${SSH_TMP_TXT} && $(grep -w ${HOST} ${SSH_TMP_TXT}) ]];then
         local SSH_TMP_PASS=$(grep -w "${HOST}" ${SSH_TMP_TXT}|awk '{print $NF}')
@@ -125,7 +126,7 @@ function ssh_handler::exec_fetch_metrics() {
         unset SSH_TMP_PASS
     fi
 
-    ## 获取数据
+    ## Get data
     DISK_DATA=$(sshpass -p "${SSH_TMP_PASS}" ssh -o StrictHostKeyChecking=no ${HOST} df -hT / /var/lib/docker /alauda-data /alauda_data /alaudadata /cpaas /data 2> /dev/null|awk -v n=${HOST} 'BEGIN {print n":"} NR>1{print $NF,$(NF-1)}'|xargs|column -t)
     echo "${DISK_DATA}" >> ${HOST_DISK_TXT}
     sshpass -p "${SSH_TMP_PASS}" ssh -o StrictHostKeyChecking=no ${HOST} "echo ${HOST}: $(date '+%Y-%m-%d %H:%M:%S')" >> ${HOST_TIME_TXT}
@@ -137,6 +138,7 @@ function ssh_handler::exec_fetch_metrics() {
 
 function ssh_handler::exec_check_cert_file() {
 
+    ## SSH each server check cert file
     local HOST=${1}
 
     log::info "ssh ${HOST} check cert file"
@@ -184,7 +186,7 @@ function ssh_handler::exec_check_cert_file() {
 
 function jq_handler::host_num() {
 
-    ## 通过cluster接口的返回json计算集群各数
+    ## Calculate the number of clusters by returning JSON of cluster interface
     HOST_COUNT=$(cat ${CLUSTER_JSON}|jq -r '.items[].metadata.name'|wc -l)
 
     printf "${HOST_COUNT}\n" > ${HOST_NUM_TXT}
@@ -193,8 +195,8 @@ function jq_handler::host_num() {
 
 function jq_handler::cluster_json() {
 
-    ## 获取容器平台cluser接口的返回json
-    ## jq截取各个集群名称
+    ## Get the return JSON of the container platform cluser interface
+    ## JQ intercepts each cluster name
     log::info "geting ${CLUSTER_URL} cluster interface"
     check::url_check ${CLUSTER_URL}
     curl -sk ${CLUSTER_URL}  -H "Authorization:Bearer ${TOKEN}"  | jq . > ${CLUSTER_JSON}
@@ -204,8 +206,8 @@ function jq_handler::cluster_json() {
 
 function scan-server::cut_nodes_json() {
 
-    ## 通过遍历集群名称获取容器平台nodes接口的返回json
-    ## jq截取各个服务器的指标数据
+    ## Get the returned JSON of nodes interface of container platform by traversing the cluster name
+    ## JQ intercepts the index data of each server
     for h in $(cat ${HOST_LIST_TXT});do
         NODES_URL="${PRE_URL}/kubernetes/${h}/api/v1/nodes"
         log::info "geting ${NODES_URL} nodes interface"
@@ -229,26 +231,26 @@ function scan-server::cut_nodes_json() {
 
 function scan-server::ssh_host() {
 
-    ## 进行ssh检查
+    ## SSH check
     IPS_LIST=$(awk '{print $NF}' ${HOST_IP_TXT})
 
     ssh_handler::check ${IPS_LIST}
 
     ssh_handler::ask
 
-    ## 进行ssh到各个服务器获取指标数据
+    ## SSH to each server to obtain index data
     for c in ${IPS_LIST};do
         if ! ssh_handler::exec_fetch_metrics ${c};then continue;fi
     done
 
-    ## 将各个数据合并到ret.txt
+    ## Merge the data into ret.txt
     paste ${HOST_IP_TXT} ${HOST_CPU_NUM_TXT} ${HOST_CPU_RATE_TXT} ${HOST_MEM_TXT}| sed '1icluster_name address cpu_num cpu_load memory' |column -t > ${RET_TXT}
 
 }
 
 function scan-server::display() {
 
-    ## 展示巡检数据
+    ## Display scan data
     sleep 3;log::info "displaying it now"
     printf "Server Status: \n";cat ${RET_TXT}
     printf "\nDisk Useage: \n";cat ${HOST_DISK_TXT} |column -t
@@ -259,14 +261,14 @@ function scan-server::display() {
 
 function scan-server::start() {
 
-    ## 初始化全局变量
+    ## Initialize global variables
     log::info "start scan-server program"
 
-    ## 运行前环境检查
+    ## Environmental inspection before operation
     check::run_check
 
-    ## 创建巡检目录
-    ## 在巡检目录中初始化巡检文件数据
+    ## Mkdir scan dir
+    ## Initialize patrol file data in patrol directory
     DATE_DIR="/tmp/scan-server-$(date +'%y%m%d%H%M%S')"
     if [ ! -e ${DATE_DIR} ];then mkdir -p ${DATE_DIR};fi
 
@@ -321,11 +323,8 @@ function scan-cert-file::start() {
     
     log::info "start scan-cert-file program"
 
-    ## 运行前环境检查
     check::run_check
 
-    ## 创建巡检目录
-    ## 在巡检目录中初始化巡检文件数据
     DATE_DIR="/tmp/scan-cert-file-$(date +'%y%m%d%H%M%S')"
     if [ ! -e ${DATE_DIR} ];then mkdir -p ${DATE_DIR};fi
 
@@ -339,7 +338,7 @@ function scan-cert-file::start() {
 
 function init::get_opts() {
 
-    ## 脚本选项
+    ## Script options
     > /tmp/opts.txt
     ARGS=$(getopt -o h:t:f: --long host:,token:,password-file:,scan-server,scan-cert-file,kubectl,clean,help -- "$@" 2> /tmp/opts.txt)
     if [ -s /tmp/opts.txt ];then log::error "args error, use --help to see usage";exit 1;fi
@@ -388,8 +387,6 @@ function init::over() {
 
 function init::env() {
 
-    ## 初始化脚本选项
-    ## 初始化全局变量
     init::get_opts $*
 
     if [ -z ${CLUSTER_URL} ];then log::error "platform url address not set";exit 1;fi
