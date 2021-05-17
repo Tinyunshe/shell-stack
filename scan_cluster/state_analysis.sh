@@ -16,7 +16,7 @@ function ns_count_pod() {
         if kubectl get ns ${n} &> /dev/null;then 
             printf "${n}:\n"
             printf "\tAll pods: $(kubectl -n ${n} get po|grep -cvE '^NAME')\n"
-            printf "\tNormall pods: $(kubectl -n ${n} get po|grep -c 'Running')\n"
+            printf "\tNormal pods: $(kubectl -n ${n} get po|grep -c 'Running')\n"
             printf "\tError pods: $(kubectl -n ${n} get po|grep -cvE '^NAME|Running')\n"
             printf "\tNot match replicas pods:\n$(kubectl -n ${n} get po -owide|awk -F '[/ ]+' 'NR>1{if($2<$3)print $0}')\n"
         else
